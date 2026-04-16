@@ -1,0 +1,70 @@
+{
+  "name": "Shootaship",
+  "tree": {
+    "$className": "DataModel",
+
+    // === SHARED CODE ===
+    // ReplicatedStorage is replicated to ALL clients automatically.
+    // Put shared modules, configs, and RemoteEvents here.
+    "ReplicatedStorage": {
+      "Shared": {
+        "$path": "src/shared"
+      }
+    },
+
+    // === SERVER CODE ===
+    // ServerScriptService only runs on the server. Clients CANNOT see this code.
+    // Put game logic, authority checks, and server-side systems here.
+    "ServerScriptService": {
+      "Server": {
+        "$path": "src/server"
+      }
+    },
+
+    // === CLIENT CODE ===
+    // StarterPlayerScripts runs on each player's client when they join.
+    // Put input handling, UI, camera, and client-side prediction here.
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "Client": {
+          "$path": "src/client"
+        }
+      }
+    },
+
+    // === WORKSPACE ===
+    // Minimal — the game is rendered via GUI, not 3D parts.
+    // Workspace exists but we don't put game objects here.
+    "Workspace": {
+      "$properties": {
+        "FilteringEnabled": true
+      }
+    },
+
+    // === STARTER GUI ===
+    // ScreenGuis placed here are automatically given to each player on join.
+    // Our entire game canvas will live in a ScreenGui.
+    "StarterGui": {
+      "$properties": {
+        "ScreenOrientation": "Sensor"
+      }
+    },
+
+    // === LIGHTING ===
+    "Lighting": {
+      "$properties": {
+        "Ambient": [0.3, 0.3, 0.35],
+        "Brightness": 2,
+        "GlobalShadows": true,
+        "Outlines": false,
+        "Technology": "Voxel"
+      }
+    },
+
+    "SoundService": {
+      "$properties": {
+        "RespectFilteringEnabled": true
+      }
+    }
+  }
+}
