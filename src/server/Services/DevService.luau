@@ -134,6 +134,8 @@ function DevService.handleCommand(player: Player, cmd)
 			ship.superBounceTimer = Constants.SUPERBOUNCE_DURATION
 		elseif powerType == "mine" then
 			ship.mineCount = ship.mineCount + Constants.MINE_COUNT
+		elseif powerType == "machinegun" then
+			ship.machinegunTimer = ship.machinegunTimer + Constants.MACHINEGUN_DURATION
 		end
 		
 	-- Set ship stats directly

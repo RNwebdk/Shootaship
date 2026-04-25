@@ -35,6 +35,7 @@ local POWERUP_VISUALS = {
 	homing  = { Color3.fromRGB(220, 80, 160),   Color3.fromRGB(150, 40, 100),  "🎯", Color3.fromRGB(255, 140, 200) },
 	superbounce = { Color3.fromRGB(120, 230, 50), Color3.fromRGB(70, 150, 25), "💢", Color3.fromRGB(180, 255, 80) },
 	mine = { Color3.fromRGB(120, 20, 20), Color3.fromRGB(80, 10, 10), "💣", Color3.fromRGB(255, 60, 60) },
+	machinegun = { Color3.fromRGB(70, 130, 180), Color3.fromRGB(40, 80, 120), "🔫", Color3.fromRGB(140, 200, 255) },
 }
 
 function CrateController.init()

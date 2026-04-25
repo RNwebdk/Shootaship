@@ -80,7 +80,7 @@ local Constants = {
 	SCATTER_SHOT_SPREAD = 0.8,     -- total spread angle in radians (~45°)
 
 	-- Yellow: Repair
-	REPAIR_AMOUNT = 50,            -- HP restored instantly
+	REPAIR_AMOUNT = 25,            -- HP restored per crate (25% of max HP)
 
 	-- Cyan: Ghost Mode
 	GHOST_DURATION = 2,            -- seconds of invulnerability (can't fire)
@@ -123,6 +123,14 @@ local Constants = {
 	MINE_ARM_DELAY = 1.0,           -- seconds before mine can hurt the dropper
 	MINE_DROP_OFFSET = 50,          -- how far behind the ship the mine spawns
 	MINE_SIZE = 20,                 -- visual size in world units
+
+	-- Steel Blue: Machinegun
+	MACHINEGUN_DURATION = 6,        -- seconds the machinegun is active
+	MACHINEGUN_FIRE_RATE = 0.15,    -- seconds between auto-fire shots
+	MACHINEGUN_DAMAGE = 10,         -- damage per bullet (less than cannonball)
+	MACHINEGUN_SPEED = 900,         -- bullet speed (faster than cannonballs)
+	MACHINEGUN_LIFETIME = 1.2,      -- seconds before bullet despawns
+	MACHINEGUN_SIZE = 4,            -- bullet radius (smaller than cannonball)
 
 	-- Viewport (what the player sees on screen)
 	VIEWPORT_SCALE = 1,          -- 1 world unit = 1 pixel at default zoom

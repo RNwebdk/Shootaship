@@ -266,6 +266,48 @@ end
 function CombatService.update(deltaTime: number)
 	local ships = ShipService.getShips()
 	
+	-- === MACHINEGUN AUTO-FIRE ===
+	local cannonFiredEvent = EventManager.getEvent("CannonFired")
+	for userId, ship in ships do
+		if ship.machinegunTimer and ship.machinegunTimer > 0 and ship.health > 0 then
+			-- Tick the per-ship fire cooldown
+			ship.machinegunCooldown = (ship.machinegunCooldown or 0) - deltaTime
+			if ship.machinegunCooldown <= 0 then
+				ship.machinegunCooldown = Constants.MACHINEGUN_FIRE_RATE
+				
+				-- Fire one bullet from the front of the ship
+				local dirX = math.sin(ship.rotation)
+				local dirY = -math.cos(ship.rotation)
+				local forward = Vector2.new(dirX, dirY)
+				local spawnPos = ship.position + (forward * 30)
+				local projVelocity = (forward * Constants.MACHINEGUN_SPEED) + (ship.velocity * 0.2)
+				
+				local id = nextProjectileId
+				nextProjectileId = nextProjectileId + 1
+				
+				table.insert(projectiles, {
+					id = id,
+					ownerId = userId,
+					position = spawnPos,
+					velocity = projVelocity,
+					age = 0,
+					homing = false,
+					machinegun = true,
+				})
+				
+				cannonFiredEvent:FireAllClients({
+					id = id,
+					ownerId = userId,
+					px = spawnPos.X,
+					py = spawnPos.Y,
+					vx = projVelocity.X,
+					vy = projVelocity.Y,
+					machinegun = true,
+				})
+			end
+		end
+	end
+	
 	-- === MINE UPDATE ===
 	local mineIdx = #mines
 	while mineIdx >= 1 do
@@ -396,8 +438,9 @@ function CombatService.update(deltaTime: number)
 		local proj = projectiles[i]
 		proj.age = proj.age + deltaTime
 		
-		-- Expire old projectiles
-		if proj.age >= Constants.CANNONBALL_LIFETIME then
+		-- Expire old projectiles (machinegun bullets have shorter lifetime)
+		local lifetime = proj.machinegun and Constants.MACHINEGUN_LIFETIME or Constants.CANNONBALL_LIFETIME
+		if proj.age >= lifetime then
 			table.remove(projectiles, i)
 			i = i - 1
 			continue
@@ -517,7 +560,8 @@ function CombatService.update(deltaTime: number)
 				if ownerShip and ownerShip.damageBoostTimer > 0 then
 					dmgMul = Constants.DAMAGE_BOOST_MULTIPLIER
 				end
-				local damage = Constants.CANNONBALL_DAMAGE * dmgMul
+				local baseDmg = proj.machinegun and Constants.MACHINEGUN_DAMAGE or Constants.CANNONBALL_DAMAGE
+				local damage = baseDmg * dmgMul
 				
 				ship.health = ship.health - damage
 				hit = true

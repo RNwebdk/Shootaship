@@ -39,7 +39,7 @@ local maxCrates = Constants.MAX_CRATES
 local maxPowerups = Constants.MAX_POWERUPS
 
 -- All possible power-up types (weighted equally)
-local POWERUP_TYPES = { "speed", "damage", "shield", "scatter", "repair", "ghost", "ram", "ammodump", "homing", "superbounce", "mine" }
+local POWERUP_TYPES = { "speed", "damage", "shield", "scatter", "repair", "ghost", "ram", "ammodump", "homing", "superbounce", "mine", "machinegun" }
 
 function CrateService.init()
 	ShipService = require(script.Parent.ShipService)
@@ -154,6 +154,8 @@ local function applyPowerUp(ship, powerType)
 		ship.superBounceTimer = Constants.SUPERBOUNCE_DURATION
 	elseif powerType == "mine" then
 		ship.mineCount = ship.mineCount + Constants.MINE_COUNT
+	elseif powerType == "machinegun" then
+		ship.machinegunTimer = ship.machinegunTimer + Constants.MACHINEGUN_DURATION
 	end
 end
 

@@ -75,15 +75,16 @@ function ProjectileController.onCannonFired(data)
 	local canvas = ViewportController.getCanvas()
 	if not canvas then return end
 
-	local size = Constants.CANNONBALL_SIZE * 2  -- diameter
+	local isMachinegun = data.machinegun == true
+	local size = if isMachinegun then Constants.MACHINEGUN_SIZE * 2 else Constants.CANNONBALL_SIZE * 2  -- diameter
 	local isBoosted = data.boosted == true
 	
-	-- Main ball — solid dark normally, fiery red when boosted
+	-- Main ball — solid dark normally, fiery red when boosted, steel-blue for machinegun
 	local ball = Instance.new("Frame")
 	ball.Name = "Cannonball_" .. tostring(data.id)
 	ball.Size = UDim2.new(0, size, 0, size)
 	ball.AnchorPoint = Vector2.new(0.5, 0.5)
-	ball.BackgroundColor3 = if isBoosted then Color3.fromRGB(200, 30, 15) else Color3.fromRGB(15, 15, 15)
+	ball.BackgroundColor3 = if isMachinegun then Color3.fromRGB(200, 40, 40) elseif isBoosted then Color3.fromRGB(200, 30, 15) else Color3.fromRGB(15, 15, 15)
 	ball.BorderSizePixel = 0
 	ball.ZIndex = 5
 	ball.Parent = canvas
@@ -98,7 +99,7 @@ function ProjectileController.onCannonFired(data)
 	shine.Size = UDim2.new(0, size * 0.35, 0, size * 0.35)
 	shine.Position = UDim2.new(0.2, 0, 0.15, 0)
 	shine.AnchorPoint = Vector2.new(0.5, 0.5)
-	shine.BackgroundColor3 = if isBoosted then Color3.fromRGB(255, 200, 80) else Color3.fromRGB(255, 255, 255)
+	shine.BackgroundColor3 = if isMachinegun then Color3.fromRGB(255, 160, 140) elseif isBoosted then Color3.fromRGB(255, 200, 80) else Color3.fromRGB(255, 255, 255)
 	shine.BackgroundTransparency = 0.4
 	shine.BorderSizePixel = 0
 	shine.ZIndex = 6
@@ -108,14 +109,14 @@ function ProjectileController.onCannonFired(data)
 	shineCorner.CornerRadius = UDim.new(1, 0)
 	shineCorner.Parent = shine
 	
-	-- Glow behind the ball (larger, transparent) — orange-red when boosted
+	-- Glow behind the ball (larger, transparent) — orange-red when boosted, blue for machinegun
 	local glow = Instance.new("Frame")
 	glow.Name = "Glow"
 	glow.Size = UDim2.new(0, size * 2, 0, size * 2)
 	glow.Position = UDim2.new(0.5, 0, 0.5, 0)
 	glow.AnchorPoint = Vector2.new(0.5, 0.5)
-	glow.BackgroundColor3 = if isBoosted then Color3.fromRGB(255, 100, 20) else Color3.fromRGB(30, 30, 30)
-	glow.BackgroundTransparency = if isBoosted then 0.55 else 0.75
+	glow.BackgroundColor3 = if isMachinegun then Color3.fromRGB(255, 80, 60) elseif isBoosted then Color3.fromRGB(255, 100, 20) else Color3.fromRGB(30, 30, 30)
+	glow.BackgroundTransparency = if isMachinegun then 0.5 elseif isBoosted then 0.55 else 0.75
 	glow.BorderSizePixel = 0
 	glow.ZIndex = 4
 	glow.Parent = ball
@@ -128,13 +129,13 @@ function ProjectileController.onCannonFired(data)
 	ball.Position = ViewportController.worldToCanvas(pos)
 	
 	-- === MUZZLE FLASH VFX ===
-	local flashSize = size * 3
+	local flashSize = if isMachinegun then size * 1.5 else size * 3
 	local flash = Instance.new("Frame")
 	flash.Name = "MuzzleFlash"
 	flash.Size = UDim2.new(0, flashSize, 0, flashSize)
 	flash.Position = ViewportController.worldToCanvas(pos)
 	flash.AnchorPoint = Vector2.new(0.5, 0.5)
-	flash.BackgroundColor3 = if isBoosted then Color3.fromRGB(255, 80, 30) else Color3.fromRGB(255, 220, 100)
+	flash.BackgroundColor3 = if isMachinegun then Color3.fromRGB(255, 100, 80) elseif isBoosted then Color3.fromRGB(255, 80, 30) else Color3.fromRGB(255, 220, 100)
 	flash.BackgroundTransparency = 0.3
 	flash.BorderSizePixel = 0
 	flash.ZIndex = 6
@@ -190,6 +191,7 @@ function ProjectileController.onCannonFired(data)
 		position = pos,
 		velocity = Vector2.new(data.vx, data.vy),
 		age = 0,
+		machinegun = isMachinegun,
 	})
 end
 
@@ -308,7 +310,8 @@ function ProjectileController.update(deltaTime: number)
 		proj.age = proj.age + deltaTime
 		
 		-- Remove expired projectiles
-		if proj.age >= Constants.CANNONBALL_LIFETIME then
+		local lifetime = proj.machinegun and Constants.MACHINEGUN_LIFETIME or Constants.CANNONBALL_LIFETIME
+		if proj.age >= lifetime then
 			proj.frame:Destroy()
 			table.remove(projectiles, i)
 			i = i - 1
@@ -320,7 +323,7 @@ function ProjectileController.update(deltaTime: number)
 		proj.frame.Position = ViewportController.worldToCanvas(proj.position)
 		
 		-- Fade slightly near end of life
-		local remaining = Constants.CANNONBALL_LIFETIME - proj.age
+		local remaining = lifetime - proj.age
 		if remaining < 0.3 then
 			proj.frame.BackgroundTransparency = 1 - (remaining / 0.3)
 		end

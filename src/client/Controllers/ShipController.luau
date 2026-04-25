@@ -37,6 +37,7 @@ local EventManager = require(ReplicatedStorage.Shared.EventManager)
 local ViewportController = require(script.Parent.ViewportController)
 local ShipBuilder = require(script.Parent.ShipBuilder)
 local WakeEffect = require(script.Parent.WakeEffect)
+local SmokeEffect = require(script.Parent.SmokeEffect)
 local AmmoHUD = require(script.Parent.AmmoHUD)
 local HealthHUD = require(script.Parent.HealthHUD)
 local KillsHUD = require(script.Parent.KillsHUD)
@@ -121,7 +122,8 @@ function ShipController.init()
 end
 
 --[[
-	Plays a shockwave ring + burst when a ship activates block/reflect.
+	Plays a layered force-field shockwave when a ship activates block/reflect.
+	Layers: core flash, dome pulse, dual expanding rings, energy shards, repulse sparks.
 ]]
 function ShipController.onBlockActivated(data)
 	local canvas = ViewportController.getCanvas()
@@ -129,78 +131,244 @@ function ShipController.onBlockActivated(data)
 	
 	local worldPos = Vector2.new(data.px, data.py)
 	local canvasPos = ViewportController.worldToCanvas(worldPos)
-	
-	-- Play a sound for the shockwave
-	local sound = Instance.new("Sound")
-	sound.SoundId = "rbxasset://sounds/impact_water.mp3"
-	sound.Volume = 0.8
-	sound.PlaybackSpeed = 2.0  -- high pitch whoosh
-	sound.Parent = SoundService
-	sound:Play()
-	sound.Ended:Once(function()
-		sound:Destroy()
-	end)
-	
-	-- === SHOCKWAVE RING (cyan/white, expands to BLOCK_RADIUS) ===
-	local ring = Instance.new("Frame")
-	ring.Name = "BlockRing"
-	ring.Size = UDim2.new(0, 20, 0, 20)
-	ring.Position = canvasPos
-	ring.AnchorPoint = Vector2.new(0.5, 0.5)
-	ring.BackgroundTransparency = 1
-	ring.BorderSizePixel = 0
-	ring.ZIndex = 8
-	ring.Parent = canvas
-	
-	local ringCorner = Instance.new("UICorner")
-	ringCorner.CornerRadius = UDim.new(1, 0)
-	ringCorner.Parent = ring
-	
-	local ringStroke = Instance.new("UIStroke")
-	ringStroke.Color = Color3.fromRGB(100, 255, 255)
-	ringStroke.Thickness = 5
-	ringStroke.Transparency = 0
-	ringStroke.Parent = ring
-	
-	-- Expand to match BLOCK_RADIUS and fade
 	local targetSize = Constants.BLOCK_RADIUS * 2
-	local expandTween = TweenService:Create(ring, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Size = UDim2.new(0, targetSize, 0, targetSize),
-	})
-	local fadeTween = TweenService:Create(ringStroke, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Transparency = 1,
-		Thickness = 1,
-	})
-	expandTween:Play()
-	fadeTween:Play()
-	expandTween.Completed:Connect(function()
-		ring:Destroy()
-	end)
 	
-	-- === INNER FLASH (bright circle that fades quickly) ===
-	local flash = Instance.new("Frame")
-	flash.Name = "BlockFlash"
-	flash.Size = UDim2.new(0, 50, 0, 50)
-	flash.Position = canvasPos
-	flash.AnchorPoint = Vector2.new(0.5, 0.5)
-	flash.BackgroundColor3 = Color3.fromRGB(180, 255, 255)
-	flash.BackgroundTransparency = 0.3
-	flash.BorderSizePixel = 0
-	flash.ZIndex = 7
-	flash.Parent = canvas
+	-- === SOUND: layered deep thud + high whoosh ===
+	local thudSound = Instance.new("Sound")
+	thudSound.SoundId = "rbxasset://sounds/impact_water.mp3"
+	thudSound.Volume = 1.0
+	thudSound.PlaybackSpeed = 0.6
+	thudSound.Parent = SoundService
+	thudSound:Play()
+	thudSound.Ended:Once(function() thudSound:Destroy() end)
 	
-	local flashCorner = Instance.new("UICorner")
-	flashCorner.CornerRadius = UDim.new(1, 0)
-	flashCorner.Parent = flash
+	local whooshSound = Instance.new("Sound")
+	whooshSound.SoundId = "rbxasset://sounds/impact_water.mp3"
+	whooshSound.Volume = 0.6
+	whooshSound.PlaybackSpeed = 2.5
+	whooshSound.Parent = SoundService
+	whooshSound:Play()
+	whooshSound.Ended:Once(function() whooshSound:Destroy() end)
 	
-	local flashTween = TweenService:Create(flash, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Size = UDim2.new(0, 100, 0, 100),
+	-- === CORE FLASH (big bright white-cyan circle, snaps out and fades) ===
+	local coreFlash = Instance.new("Frame")
+	coreFlash.Name = "BlockCoreFlash"
+	coreFlash.Size = UDim2.new(0, 60, 0, 60)
+	coreFlash.Position = canvasPos
+	coreFlash.AnchorPoint = Vector2.new(0.5, 0.5)
+	coreFlash.BackgroundColor3 = Color3.fromRGB(220, 255, 255)
+	coreFlash.BackgroundTransparency = 0
+	coreFlash.BorderSizePixel = 0
+	coreFlash.ZIndex = 12
+	coreFlash.Parent = canvas
+	
+	local coreCorner = Instance.new("UICorner")
+	coreCorner.CornerRadius = UDim.new(1, 0)
+	coreCorner.Parent = coreFlash
+	
+	TweenService:Create(coreFlash, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Size = UDim2.new(0, 180, 0, 180),
 		BackgroundTransparency = 1,
-	})
-	flashTween:Play()
-	flashTween.Completed:Connect(function()
-		flash:Destroy()
+	}):Play()
+	
+	task.delay(0.4, function()
+		if coreFlash and coreFlash.Parent then coreFlash:Destroy() end
 	end)
+	
+	-- === DOME (translucent cyan circle, snaps open then shrinks away) ===
+	local dome = Instance.new("Frame")
+	dome.Name = "BlockDome"
+	dome.Size = UDim2.new(0, targetSize * 0.85, 0, targetSize * 0.85)
+	dome.Position = canvasPos
+	dome.AnchorPoint = Vector2.new(0.5, 0.5)
+	dome.BackgroundColor3 = Color3.fromRGB(80, 230, 255)
+	dome.BackgroundTransparency = 0.6
+	dome.BorderSizePixel = 0
+	dome.ZIndex = 7
+	dome.Parent = canvas
+	
+	local domeCorner = Instance.new("UICorner")
+	domeCorner.CornerRadius = UDim.new(1, 0)
+	domeCorner.Parent = dome
+	
+	local domeStroke = Instance.new("UIStroke")
+	domeStroke.Color = Color3.fromRGB(150, 255, 255)
+	domeStroke.Thickness = 3
+	domeStroke.Transparency = 0
+	domeStroke.Parent = dome
+	
+	-- Dome shrinks and fades out
+	TweenService:Create(dome, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+		Size = UDim2.new(0, 30, 0, 30),
+		BackgroundTransparency = 1,
+	}):Play()
+	TweenService:Create(domeStroke, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+		Transparency = 1,
+		Thickness = 0,
+	}):Play()
+	
+	task.delay(0.45, function()
+		if dome and dome.Parent then dome:Destroy() end
+	end)
+	
+	-- === DUAL SHOCKWAVE RINGS (fast outer + slower inner) ===
+	for i = 1, 2 do
+		local ring = Instance.new("Frame")
+		ring.Name = "BlockRing" .. i
+		ring.Size = UDim2.new(0, 20, 0, 20)
+		ring.Position = canvasPos
+		ring.AnchorPoint = Vector2.new(0.5, 0.5)
+		ring.BackgroundTransparency = 1
+		ring.BorderSizePixel = 0
+		ring.ZIndex = 9
+		ring.Parent = canvas
+		
+		local rc = Instance.new("UICorner")
+		rc.CornerRadius = UDim.new(1, 0)
+		rc.Parent = ring
+		
+		local rs = Instance.new("UIStroke")
+		rs.Color = if i == 1 then Color3.fromRGB(120, 255, 255) else Color3.fromRGB(200, 245, 255)
+		rs.Thickness = if i == 1 then 5 else 3
+		rs.Transparency = 0
+		rs.Parent = ring
+		
+		local ringSize = if i == 1 then targetSize * 1.1 else targetSize * 0.7
+		local ringDuration = if i == 1 then 0.35 else 0.25
+		
+		TweenService:Create(ring, TweenInfo.new(ringDuration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = UDim2.new(0, ringSize, 0, ringSize),
+		}):Play()
+		TweenService:Create(rs, TweenInfo.new(ringDuration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Transparency = 1,
+			Thickness = 0.5,
+		}):Play()
+		
+		task.delay(ringDuration + 0.05, function()
+			if ring and ring.Parent then ring:Destroy() end
+		end)
+	end
+	
+	-- === ENERGY SHARDS (small diamond shapes bursting outward) ===
+	for i = 1, 8 do
+		local shardSize = math.random(10, 18)
+		local shard = Instance.new("Frame")
+		shard.Name = "BlockShard"
+		shard.Size = UDim2.new(0, shardSize, 0, shardSize)
+		shard.Position = canvasPos
+		shard.AnchorPoint = Vector2.new(0.5, 0.5)
+		shard.BackgroundColor3 = Color3.fromRGB(
+			80 + math.random(0, 80),
+			220 + math.random(0, 35),
+			255
+		)
+		shard.BackgroundTransparency = 0.1
+		shard.BorderSizePixel = 0
+		shard.ZIndex = 10
+		shard.Rotation = (i / 8) * 360 + 45
+		shard.Parent = canvas
+		
+		local shardCorner = Instance.new("UICorner")
+		shardCorner.CornerRadius = UDim.new(0.15, 0)
+		shardCorner.Parent = shard
+		
+		local shardStroke = Instance.new("UIStroke")
+		shardStroke.Color = Color3.fromRGB(180, 255, 255)
+		shardStroke.Thickness = 1.5
+		shardStroke.Parent = shard
+		
+		local angle = (i / 8) * math.pi * 2 + (math.random() - 0.5) * 0.3
+		local dist = math.random(50, 90)
+		local ox = math.cos(angle) * dist
+		local oy = math.sin(angle) * dist
+		local dur = 0.3 + math.random() * 0.15
+		
+		TweenService:Create(shard, TweenInfo.new(dur, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Position = UDim2.new(canvasPos.X.Scale, canvasPos.X.Offset + ox, canvasPos.Y.Scale, canvasPos.Y.Offset + oy),
+			Size = UDim2.new(0, shardSize * 0.3, 0, shardSize * 0.3),
+			BackgroundTransparency = 1,
+			Rotation = shard.Rotation + math.random(-90, 90),
+		}):Play()
+		TweenService:Create(shardStroke, TweenInfo.new(dur), { Transparency = 1 }):Play()
+		
+		task.delay(dur + 0.05, function()
+			if shard and shard.Parent then shard:Destroy() end
+		end)
+	end
+	
+	-- === ELECTRIC ARC LINES (jagged bright lines from center) ===
+	for i = 1, 6 do
+		local arcAngle = (i / 6) * math.pi * 2 + (math.random() - 0.5) * 0.5
+		local arcLen = math.random(35, 65)
+		local arcThick = math.random(2, 4)
+		
+		local arc = Instance.new("Frame")
+		arc.Name = "BlockArc"
+		arc.Size = UDim2.new(0, arcLen, 0, arcThick)
+		arc.Position = canvasPos
+		arc.AnchorPoint = Vector2.new(0, 0.5)
+		arc.BackgroundColor3 = Color3.fromRGB(200, 255, 255)
+		arc.BackgroundTransparency = 0
+		arc.BorderSizePixel = 0
+		arc.Rotation = math.deg(arcAngle)
+		arc.ZIndex = 11
+		arc.Parent = canvas
+		
+		local arcGrad = Instance.new("UIGradient")
+		arcGrad.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0),
+			NumberSequenceKeypoint.new(0.6, 0.3),
+			NumberSequenceKeypoint.new(1, 1),
+		})
+		arcGrad.Parent = arc
+		
+		TweenService:Create(arc, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = UDim2.new(0, arcLen * 1.5, 0, arcThick),
+			BackgroundTransparency = 1,
+		}):Play()
+		
+		task.delay(0.25, function()
+			if arc and arc.Parent then arc:Destroy() end
+		end)
+	end
+	
+	-- === REPULSE PARTICLES (glowing dots pushed outward) ===
+	for j = 1, 12 do
+		local dotSize = math.random(4, 7)
+		local dot = Instance.new("Frame")
+		dot.Size = UDim2.new(0, dotSize, 0, dotSize)
+		dot.Position = canvasPos
+		dot.AnchorPoint = Vector2.new(0.5, 0.5)
+		dot.BackgroundColor3 = Color3.fromRGB(
+			140 + math.random(0, 115),
+			240 + math.random(0, 15),
+			255
+		)
+		dot.BackgroundTransparency = 0
+		dot.BorderSizePixel = 0
+		dot.ZIndex = 10
+		dot.Parent = canvas
+		
+		local dc = Instance.new("UICorner")
+		dc.CornerRadius = UDim.new(1, 0)
+		dc.Parent = dot
+		
+		local angle = (j / 12) * math.pi * 2 + (math.random() - 0.5) * 0.4
+		local dist = math.random(55, 105)
+		local ox = math.cos(angle) * dist
+		local oy = math.sin(angle) * dist
+		local dur = 0.35 + math.random() * 0.2
+		
+		TweenService:Create(dot, TweenInfo.new(dur, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Position = UDim2.new(canvasPos.X.Scale, canvasPos.X.Offset + ox, canvasPos.Y.Scale, canvasPos.Y.Offset + oy),
+			BackgroundTransparency = 1,
+			Size = UDim2.new(0, 1, 0, 1),
+		}):Play()
+		
+		task.delay(dur + 0.05, function()
+			if dot and dot.Parent then dot:Destroy() end
+		end)
+	end
 end
 
 --[[
@@ -423,6 +591,295 @@ function ShipController.onStateSync(stateData)
 end
 
 --[[
+	Creates the glowing energy shield bubble around a ship.
+	Includes: translucent dome, outer glow aura, pulsing stroke,
+	shimmer gradient, and orbiting energy motes.
+]]
+function ShipController._createShieldBubble(visual)
+	local shipW = Constants.SHIP_SIZE.X
+	local shipH = Constants.SHIP_SIZE.Y
+	local bubbleSize = math.max(shipW, shipH) * 1.8
+
+	-- === OUTER GLOW AURA (soft, large, breathes) ===
+	local outerGlow = Instance.new("Frame")
+	outerGlow.Name = "ShieldOuterGlow"
+	outerGlow.Size = UDim2.new(0, bubbleSize * 1.35, 0, bubbleSize * 1.35)
+	outerGlow.Position = UDim2.new(0.5, 0, 0.5, 0)
+	outerGlow.AnchorPoint = Vector2.new(0.5, 0.5)
+	outerGlow.BackgroundColor3 = Color3.fromRGB(60, 140, 255)
+	outerGlow.BackgroundTransparency = 0.91
+	outerGlow.BorderSizePixel = 0
+	outerGlow.ZIndex = 1
+	outerGlow.Parent = visual.frame
+
+	local outerCorner = Instance.new("UICorner")
+	outerCorner.CornerRadius = UDim.new(1, 0)
+	outerCorner.Parent = outerGlow
+
+	TweenService:Create(outerGlow, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+		Size = UDim2.new(0, bubbleSize * 1.55, 0, bubbleSize * 1.55),
+		BackgroundTransparency = 0.96,
+	}):Play()
+
+	-- === MAIN SHIELD BUBBLE ===
+	local bubble = Instance.new("Frame")
+	bubble.Name = "ShieldBubble"
+	bubble.Size = UDim2.new(0, bubbleSize, 0, bubbleSize)
+	bubble.Position = UDim2.new(0.5, 0, 0.5, 0)
+	bubble.AnchorPoint = Vector2.new(0.5, 0.5)
+	bubble.BackgroundColor3 = Color3.fromRGB(60, 140, 255)
+	bubble.BackgroundTransparency = 0.82
+	bubble.BorderSizePixel = 0
+	bubble.ZIndex = 2
+	bubble.Parent = visual.frame
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(1, 0)
+	corner.Parent = bubble
+
+	-- Shimmering color gradient across the bubble
+	local gradient = Instance.new("UIGradient")
+	gradient.Name = "ShieldGradient"
+	gradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(80, 160, 255)),
+		ColorSequenceKeypoint.new(0.35, Color3.fromRGB(180, 220, 255)),
+		ColorSequenceKeypoint.new(0.65, Color3.fromRGB(100, 180, 255)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 120, 255)),
+	})
+	gradient.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.75),
+		NumberSequenceKeypoint.new(0.4, 0.55),
+		NumberSequenceKeypoint.new(0.6, 0.55),
+		NumberSequenceKeypoint.new(1, 0.75),
+	})
+	gradient.Parent = bubble
+
+	-- Pulsing glow stroke on the bubble edge
+	local stroke = Instance.new("UIStroke")
+	stroke.Name = "ShieldStroke"
+	stroke.Color = Color3.fromRGB(120, 190, 255)
+	stroke.Thickness = 3
+	stroke.Transparency = 0.15
+	stroke.Parent = bubble
+
+	TweenService:Create(stroke, TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+		Thickness = 5,
+		Transparency = 0.5,
+		Color = Color3.fromRGB(180, 225, 255),
+	}):Play()
+
+	-- Gentle bubble size pulse (breathing effect)
+	TweenService:Create(bubble, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+		Size = UDim2.new(0, bubbleSize * 1.06, 0, bubbleSize * 1.06),
+		BackgroundTransparency = 0.87,
+	}):Play()
+
+	-- === ENERGY MOTES (twinkling dots around the shield edge) ===
+	local MOTE_COUNT = 6
+	for i = 1, MOTE_COUNT do
+		local mote = Instance.new("Frame")
+		mote.Name = "ShieldMote"
+		mote.Size = UDim2.new(0, 5, 0, 5)
+		mote.AnchorPoint = Vector2.new(0.5, 0.5)
+		local angle = (i / MOTE_COUNT) * math.pi * 2
+		local radius = bubbleSize * 0.44
+		mote.Position = UDim2.new(0.5, math.cos(angle) * radius, 0.5, math.sin(angle) * radius)
+		mote.BackgroundColor3 = Color3.fromRGB(210, 235, 255)
+		mote.BackgroundTransparency = 0.2
+		mote.BorderSizePixel = 0
+		mote.ZIndex = 3
+		mote.Parent = bubble
+
+		local mc = Instance.new("UICorner")
+		mc.CornerRadius = UDim.new(1, 0)
+		mc.Parent = mote
+
+		-- Staggered twinkle: each mote fades in/out on its own rhythm
+		task.delay((i / MOTE_COUNT) * 1.0, function()
+			if not mote or not mote.Parent then return end
+			TweenService:Create(mote, TweenInfo.new(0.5 + i * 0.08, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+				BackgroundTransparency = 0.85,
+				Size = UDim2.new(0, 2, 0, 2),
+			}):Play()
+		end)
+	end
+
+	-- Store references for per-frame shimmer updates
+	visual.shieldGradient = gradient
+	visual.shieldAngle = 0
+end
+
+--[[
+	One-time activation burst when shield is picked up:
+	bright flash, concentric expanding rings, sparkle particles, sound.
+]]
+function ShipController._playShieldActivation(visual, canvas)
+	local canvasPos = visual.frame.Position
+
+	-- Activation sound
+	local sound = Instance.new("Sound")
+	sound.SoundId = "rbxasset://sounds/impact_water.mp3"
+	sound.Volume = 0.7
+	sound.PlaybackSpeed = 2.5
+	sound.Parent = SoundService
+	sound:Play()
+	sound.Ended:Once(function()
+		sound:Destroy()
+	end)
+
+	-- === BRIGHT FLASH (white-blue circle expanding outward) ===
+	local flash = Instance.new("Frame")
+	flash.Name = "ShieldFlash"
+	flash.Size = UDim2.new(0, 20, 0, 20)
+	flash.Position = canvasPos
+	flash.AnchorPoint = Vector2.new(0.5, 0.5)
+	flash.BackgroundColor3 = Color3.fromRGB(200, 230, 255)
+	flash.BackgroundTransparency = 0
+	flash.BorderSizePixel = 0
+	flash.ZIndex = 10
+	flash.Parent = canvas
+
+	local flashCorner = Instance.new("UICorner")
+	flashCorner.CornerRadius = UDim.new(1, 0)
+	flashCorner.Parent = flash
+
+	local flashTween = TweenService:Create(flash, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Size = UDim2.new(0, 150, 0, 150),
+		BackgroundTransparency = 1,
+	})
+	flashTween:Play()
+	flashTween.Completed:Connect(function()
+		flash:Destroy()
+	end)
+
+	-- === EXPANDING RINGS (2 concentric, staggered) ===
+	for i = 1, 2 do
+		local ring = Instance.new("Frame")
+		ring.Name = "ShieldActivateRing"
+		ring.Size = UDim2.new(0, 16, 0, 16)
+		ring.Position = canvasPos
+		ring.AnchorPoint = Vector2.new(0.5, 0.5)
+		ring.BackgroundTransparency = 1
+		ring.BorderSizePixel = 0
+		ring.ZIndex = 9
+		ring.Parent = canvas
+
+		local rc = Instance.new("UICorner")
+		rc.CornerRadius = UDim.new(1, 0)
+		rc.Parent = ring
+
+		local rs = Instance.new("UIStroke")
+		rs.Color = Color3.fromRGB(100, 180, 255)
+		rs.Thickness = 4
+		rs.Transparency = 0
+		rs.Parent = ring
+
+		local ringDelay = (i - 1) * 0.12
+		task.delay(ringDelay, function()
+			if not ring or not ring.Parent then return end
+			local expandSize = 100 + i * 35
+			TweenService:Create(ring, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Size = UDim2.new(0, expandSize, 0, expandSize),
+			}):Play()
+			local fadeTween = TweenService:Create(rs, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Transparency = 1,
+				Thickness = 1,
+			})
+			fadeTween:Play()
+			fadeTween.Completed:Connect(function()
+				ring:Destroy()
+			end)
+		end)
+	end
+
+	-- === SPARKLE PARTICLES (blue-white dots bursting outward) ===
+	for j = 1, 14 do
+		local spark = Instance.new("Frame")
+		spark.Size = UDim2.new(0, math.random(3, 7), 0, math.random(3, 7))
+		spark.Position = canvasPos
+		spark.AnchorPoint = Vector2.new(0.5, 0.5)
+		spark.BackgroundColor3 = Color3.fromRGB(
+			130 + math.random(0, 125),
+			190 + math.random(0, 65),
+			255
+		)
+		spark.BackgroundTransparency = 0
+		spark.BorderSizePixel = 0
+		spark.ZIndex = 10
+		spark.Rotation = math.random(0, 360)
+		spark.Parent = canvas
+
+		local sc = Instance.new("UICorner")
+		sc.CornerRadius = UDim.new(1, 0)
+		sc.Parent = spark
+
+		local angle = (j / 14) * math.pi * 2 + (math.random() - 0.5) * 0.4
+		local dist = math.random(50, 110)
+		local offsetX = math.cos(angle) * dist
+		local offsetY = math.sin(angle) * dist
+
+		local sparkTween = TweenService:Create(spark, TweenInfo.new(0.45 + math.random() * 0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Position = canvasPos + UDim2.new(0, offsetX, 0, offsetY),
+			BackgroundTransparency = 1,
+			Size = UDim2.new(0, 1, 0, 1),
+		})
+		sparkTween:Play()
+		sparkTween.Completed:Connect(function()
+			spark:Destroy()
+		end)
+	end
+end
+
+--[[
+	Per-frame update: rotates the shimmer gradient for a living glow effect.
+]]
+function ShipController._updateShieldBubble(visual, deltaTime)
+	if visual.shieldGradient then
+		visual.shieldAngle = (visual.shieldAngle or 0) + deltaTime * 0.7
+		local shimmer = math.sin(visual.shieldAngle) * 0.25
+		visual.shieldGradient.Offset = Vector2.new(shimmer, shimmer * 0.6)
+		visual.shieldGradient.Rotation = (visual.shieldAngle * 45) % 360
+	end
+end
+
+--[[
+	Removes the shield bubble with a brief pop/fade-out.
+]]
+function ShipController._removeShieldBubble(visual)
+	local bubble = visual.frame:FindFirstChild("ShieldBubble")
+	if bubble then
+		-- Pop-out: shrink and fade
+		local stroke = bubble:FindFirstChild("ShieldStroke")
+		if stroke then
+			TweenService:Create(stroke, TweenInfo.new(0.25), { Transparency = 1 }):Play()
+		end
+		local popTween = TweenService:Create(bubble, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+			Size = UDim2.new(0, 0, 0, 0),
+			BackgroundTransparency = 1,
+		})
+		popTween:Play()
+		popTween.Completed:Connect(function()
+			bubble:Destroy()
+		end)
+	end
+
+	local outerGlow = visual.frame:FindFirstChild("ShieldOuterGlow")
+	if outerGlow then
+		local glowTween = TweenService:Create(outerGlow, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = UDim2.new(0, 0, 0, 0),
+			BackgroundTransparency = 1,
+		})
+		glowTween:Play()
+		glowTween.Completed:Connect(function()
+			outerGlow:Destroy()
+		end)
+	end
+
+	visual.shieldGradient = nil
+	visual.shieldAngle = nil
+end
+
+--[[
 	Render tick — called every frame (~60fps) by the client init script.
 	
 	Smoothly interpolates each ship's visual position toward its
@@ -451,25 +908,33 @@ function ShipController.update(deltaTime: number)
 		
 		-- Apply power-up visual effects to ship frame
 		-- Ghost: semi-transparent (only affect child frames, NOT the root container)
+		-- Skip shield-related frames and the shadow/flag so their transparency is managed independently
+		local GHOST_SKIP = { ShieldBubble = true, ShieldOuterGlow = true, Shadow = true }
 		local ghostAlpha = (visual.ghost and visual.ghost > 0) and 0.6 or 0
 		for _, child in visual.frame:GetChildren() do
-			if child:IsA("Frame") then
+			if child:IsA("Frame") and not GHOST_SKIP[child.Name] then
 				child.BackgroundTransparency = ghostAlpha
 			end
 		end
 		
-		-- Shield: blue glow outline / Ram: orange glow outline
-		local effectStroke = visual.frame:FindFirstChild("EffectStroke")
+		-- Shield: glowing energy bubble (its own visual layer)
 		if visual.shield and visual.shield > 0 then
-			if not effectStroke then
-				effectStroke = Instance.new("UIStroke")
-				effectStroke.Name = "EffectStroke"
-				effectStroke.Parent = visual.frame
+			if not visual.frame:FindFirstChild("ShieldBubble") then
+				ShipController._createShieldBubble(visual)
+				if canvas then
+					ShipController._playShieldActivation(visual, canvas)
+				end
 			end
-			effectStroke.Color = Color3.fromRGB(80, 150, 255)
-			effectStroke.Thickness = 3
-			effectStroke.Transparency = 0
-		elseif visual.ram and visual.ram > 0 then
+			ShipController._updateShieldBubble(visual, deltaTime)
+		else
+			if visual.frame:FindFirstChild("ShieldBubble") or visual.frame:FindFirstChild("ShieldOuterGlow") then
+				ShipController._removeShieldBubble(visual)
+			end
+		end
+		
+		-- Ram / Damage / Block: colored UIStroke effects
+		local effectStroke = visual.frame:FindFirstChild("EffectStroke")
+		if visual.ram and visual.ram > 0 then
 			if not effectStroke then
 				effectStroke = Instance.new("UIStroke")
 				effectStroke.Name = "EffectStroke"
@@ -540,6 +1005,17 @@ function ShipController.update(deltaTime: number)
 				canvas,
 				ViewportController.worldToCanvas
 			)
+			
+			-- Emit smoke from damaged ships
+			local hpFrac = math.clamp((visual.health or 0) / Constants.SHIP_MAX_HEALTH, 0, 1)
+			SmokeEffect.emit(
+				userId,
+				visual.currentPos,
+				visual.currentRot,
+				hpFrac,
+				canvas,
+				ViewportController.worldToCanvas
+			)
 		end
 		
 		-- Update viewport to follow local player's ship
@@ -567,6 +1043,7 @@ function ShipController.update(deltaTime: number)
 				homing = visual.homing,
 				sBounce = visual.sBounce,
 				mines = visual.mines,
+				mg = visual.mg,
 				dashCd = visual.dashCd,
 				block = visual.block,
 				blockCd = visual.blockCd,
@@ -576,6 +1053,9 @@ function ShipController.update(deltaTime: number)
 	
 	-- Tick all wake particles (fade, drift, cleanup)
 	WakeEffect.update(deltaTime)
+	
+	-- Tick smoke particles
+	SmokeEffect.update(deltaTime)
 	
 	-- === SPEED LINES ===
 	-- Spawn and update speed-streak effects for the local player

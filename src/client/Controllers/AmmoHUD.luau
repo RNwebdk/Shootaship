@@ -36,6 +36,7 @@ local POWERUP_CONFIG = {
 	homing   = { "🎯", Color3.fromRGB(220, 80, 160),  "HOMING" },
 	sBounce  = { "💢", Color3.fromRGB(120, 230, 50),  "S.BOUNCE" },
 	mines    = { "💣", Color3.fromRGB(120, 20, 20),   "MINES" },
+	mg       = { "🔫", Color3.fromRGB(70, 130, 180),  "MACHGUN" },
 	block    = { "🗜", Color3.fromRGB(100, 255, 255), "BLOCK" },
 	blockCd  = { "🗜", Color3.fromRGB(80, 80, 100),   "BLOCK CD" },
 }

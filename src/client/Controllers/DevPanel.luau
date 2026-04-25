@@ -40,6 +40,7 @@ local POWERUP_BUTTONS = {
 	{ id = "homing",      label = "🎯 Homing",     color = Color3.fromRGB(220, 80, 160) },
 	{ id = "superbounce", label = "💢 S.Bounce",   color = Color3.fromRGB(120, 230, 50) },
 	{ id = "mine",        label = "💣 Mine",       color = Color3.fromRGB(120, 20, 20) },
+	{ id = "machinegun",  label = "🔫 MachGun",    color = Color3.fromRGB(70, 130, 180) },
 }
 
 local UTILITY_BUTTONS = {

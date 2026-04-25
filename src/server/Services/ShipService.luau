@@ -170,6 +170,8 @@ function ShipService.spawnShip(player: Player)
 		homingShotCount = 0,         -- homing shots remaining
 		superBounceTimer = 0,        -- seconds remaining on super bounce
 		mineCount = 0,               -- naval mines available to deploy
+		machinegunTimer = 0,         -- seconds remaining on machinegun auto-fire
+		machinegunCooldown = 0,      -- internal cooldown between machinegun shots
 		dashCooldown = 0,            -- seconds until next dash is available
 		blockTimer = 0,              -- seconds remaining on active block shockwave
 		blockCooldown = 0,           -- seconds until next block is available
@@ -216,6 +218,9 @@ function ShipService.update(deltaTime: number)
 		end
 		if ship.superBounceTimer > 0 then
 			ship.superBounceTimer = math.max(0, ship.superBounceTimer - deltaTime)
+		end
+		if (ship.machinegunTimer or 0) > 0 then
+			ship.machinegunTimer = math.max(0, ship.machinegunTimer - deltaTime)
 		end
 		if ship.dashCooldown > 0 then
 			ship.dashCooldown = math.max(0, ship.dashCooldown - deltaTime)
@@ -535,6 +540,7 @@ function ShipService.broadcastState()
 			homing = ship.homingShotCount > 0 and ship.homingShotCount or nil,
 			sBounce = ship.superBounceTimer > 0 and ship.superBounceTimer or nil,
 			mines = ship.mineCount > 0 and ship.mineCount or nil,
+			mg = (ship.machinegunTimer or 0) > 0 and ship.machinegunTimer or nil,
 			kills = kills[userId] or 0,
 			dashCd = ship.dashCooldown > 0 and ship.dashCooldown or nil,
 			block = ship.blockTimer > 0 and ship.blockTimer or nil,
