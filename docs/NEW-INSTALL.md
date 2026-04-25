@@ -24,8 +24,32 @@ cd Shootaship
 Run:
 
 ```powershell
-winget install Rokit.Rokit
+Invoke-RestMethod https://raw.githubusercontent.com/rojo-rbx/rokit/main/scripts/install.ps1 | Invoke-Expression
 rokit install
+```
+
+If `rokit` is not recognized right after install:
+
+1. Close all terminals and VS Code.
+2. Open a new PowerShell window.
+3. Run:
+
+```powershell
+rokit --version
+```
+
+If it still fails, run the installer again and force self-install:
+
+```powershell
+Invoke-RestMethod https://raw.githubusercontent.com/rojo-rbx/rokit/main/scripts/install.ps1 | Invoke-Expression
+rokit self-install
+```
+
+Then reopen a new terminal and verify:
+
+```powershell
+rokit --version
+rojo --version
 ```
 
 Then check Rojo:
