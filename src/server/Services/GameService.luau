@@ -525,12 +525,21 @@ function GameService.addPlayer(player: Player)
 		maxPlayers = gameConfig.maxPlayers,
 		hostId = gameConfig.hostId,
 		isSandbox = gameConfig.isSandbox,
+		isRace = gameConfig.isRace,
 		state = currentState,
 	})
 
 	-- Tell the client to switch to game mode
 	local switchEvent = EventManager.getEvent("SwitchMode")
-	switchEvent:FireClient(player, gameConfig.isSandbox and "sandbox" or "game")
+	local mode
+	if gameConfig.isRace then
+		mode = "race"
+	elseif gameConfig.isSandbox then
+		mode = "sandbox"
+	else
+		mode = "game"
+	end
+	switchEvent:FireClient(player, mode)
 
 	-- Sync existing crates/powerups so the new player can see them
 	local CrateService = require(script.Parent.CrateService)

@@ -1,4 +1,4 @@
---[[
+﻿--[[
 	Client Entry Point
 	==================
 	This script runs on EACH player's machine when they join the game.
@@ -39,38 +39,51 @@ print("[Client] Detected server mode:", serverMode)
 local GAMEPLAY_GUIS = {
 	"ShootashipUI", "AmmoHUD", "HealthHUD", "KillsHUD",
 	"ScoreHUDGui", "HostMenuGui", "LeaderboardUI", "DevPanel", "LeaveGameGui",
+	"RaceHUD",
 }
 
 -- Function to boot all gameplay controllers; returns a cleanup function
-local function bootGameplay(isSandbox: boolean): () -> ()
+local function bootGameplay(isSandbox: boolean, isRace: boolean?): () -> ()
 	local Players = game:GetService("Players")
 	local EventManager = require(ReplicatedStorage.Shared.EventManager)
 
 	local InputController = require(script.Controllers.InputController)
 	local ViewportController = require(script.Controllers.ViewportController)
 	local ShipController = require(script.Controllers.ShipController)
-	local ProjectileController = require(script.Controllers.ProjectileController)
-	local CrateController = require(script.Controllers.CrateController)
 	local AmmoHUD = require(script.Controllers.AmmoHUD)
 	local HealthHUD = require(script.Controllers.HealthHUD)
-	local MineController = require(script.Controllers.MineController)
-	local KillsHUD = require(script.Controllers.KillsHUD)
-	local Leaderboard = require(script.Controllers.Leaderboard)
-	local ScoreHUD = require(script.Controllers.ScoreHUD)
-	local HostMenu = require(script.Controllers.HostMenu)
 
 	InputController.init()
 	ViewportController.init()
 	ShipController.init()
-	ProjectileController.init()
-	CrateController.init()
 	AmmoHUD.init()
 	HealthHUD.init()
-	MineController.init()
-	KillsHUD.init()
-	Leaderboard.init()
-	ScoreHUD.init()
-	HostMenu.init()
+
+	-- Deathmatch-only controllers (skipped in race mode)
+	local ProjectileController = nil
+	local MineController = nil
+	local RaceController = nil
+
+	if isRace then
+		RaceController = require(script.Controllers.RaceController)
+		RaceController.init()
+	else
+		ProjectileController = require(script.Controllers.ProjectileController)
+		local CrateController = require(script.Controllers.CrateController)
+		MineController = require(script.Controllers.MineController)
+		local KillsHUD = require(script.Controllers.KillsHUD)
+		local Leaderboard = require(script.Controllers.Leaderboard)
+		local ScoreHUD = require(script.Controllers.ScoreHUD)
+		local HostMenu = require(script.Controllers.HostMenu)
+
+		ProjectileController.init()
+		CrateController.init()
+		MineController.init()
+		KillsHUD.init()
+		Leaderboard.init()
+		ScoreHUD.init()
+		HostMenu.init()
+	end
 
 	-- DevPanel: init if sandbox, or listen for GameConfig to detect sandbox later
 	local devPanelLoaded = false
@@ -127,8 +140,9 @@ local function bootGameplay(isSandbox: boolean): () -> ()
 	local renderConnection = RunService.RenderStepped:Connect(function(deltaTime: number)
 		ViewportController.update(deltaTime)
 		ShipController.update(deltaTime)
-		ProjectileController.update(deltaTime)
-		MineController.update(deltaTime)
+		if ProjectileController then ProjectileController.update(deltaTime) end
+		if MineController then MineController.update(deltaTime) end
+		if RaceController then RaceController.update(deltaTime) end
 	end)
 
 	-- Return cleanup function
@@ -160,7 +174,7 @@ if serverMode == "hub" then
 		if cleanupGameplay then return end -- already in game
 		print("[Client] Switching to", newMode, "mode")
 		MainMenu.destroy()
-		cleanupGameplay = bootGameplay(newMode == "sandbox")
+		cleanupGameplay = bootGameplay(newMode == "sandbox", newMode == "race")
 		print("[Client] Switched to", newMode:upper(), "mode!")
 	end
 
@@ -176,7 +190,7 @@ if serverMode == "hub" then
 	-- Listen for per-player SwitchMode event (Studio multi-player)
 	local switchModeEvent = EventManager.waitForEvent("SwitchMode")
 	switchModeEvent.OnClientEvent:Connect(function(newMode: string)
-		if newMode == "game" or newMode == "sandbox" then
+		if newMode == "game" or newMode == "sandbox" or newMode == "race" then
 			switchToGame(newMode)
 		elseif newMode == "hub" then
 			switchToHub()
@@ -186,7 +200,7 @@ if serverMode == "hub" then
 	-- Also watch StringValue changes (fallback for production mode transitions)
 	if modeValue then
 		modeValue.Changed:Connect(function(newMode)
-			if newMode == "game" or newMode == "sandbox" then
+			if newMode == "game" or newMode == "sandbox" or newMode == "race" then
 				switchToGame(newMode)
 			elseif newMode == "hub" then
 				switchToHub()
@@ -200,6 +214,6 @@ else
 	-------------------------------
 	-- GAME / SANDBOX MODE: Full gameplay
 	-------------------------------
-	bootGameplay(serverMode == "sandbox")
+	bootGameplay(serverMode == "sandbox", serverMode == "race")
 	print("[Client] Shootaship client started in", serverMode:upper(), "mode!")
 end

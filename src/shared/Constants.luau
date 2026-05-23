@@ -164,6 +164,22 @@ local Constants = {
 	-- ADMIN
 	-- ========================
 	ADMIN_NAME = "Synt4xify",          -- admin username for sandbox access
+
+	-- ========================
+	-- RACE MODE
+	-- ========================
+	RACE_START_Y = 1000,             -- ships line up on this row (south side)
+	RACE_FINISH_Y = -1300,           -- (informational) target finish row
+	RACE_SPACING = 140,              -- horizontal spacing between starting ships
+	RACE_KILL_BEHIND = 900,          -- world units behind leader before elimination
+	RACE_COUNTDOWN_INTERVAL = 1.0,   -- seconds per countdown step (3/2/1/GO)
+	RACE_BOT_COUNT = 4,              -- bots added for race testing
+	RACE_FINISH_DELAY = 6,           -- seconds before race resets after winner
+	RACE_ROCK_COUNT = 14,            -- number of static rock obstacles
+	RACE_ROCK_RADIUS = 55,           -- rock collision radius
+	RACE_ROCK_DAMAGE = 35,           -- damage dealt by rock collisions
+	RACE_ROCK_KNOCKBACK = 350,       -- velocity knockback on rock hit
+	RACE_KILLLINE_VISIBLE = true,    -- show kill-line on client
 }
 
 return Constants

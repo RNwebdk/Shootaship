@@ -99,6 +99,15 @@ local EventDefs = {
 	-- ========================
 	RequestPlayerList = "Client asks for list of players in the hub",
 	PlayerListUpdate = "Server sends list of players in the hub",
+
+	-- ========================
+	-- RACE MODE
+	-- ========================
+	RaceStartConfig = "Server sends obstacle positions and finish-line info at race start",
+	RaceCountdown = "Server sends countdown step (3/2/1 or 0=GO)",
+	RaceLeaderUpdate = "Server sends leader position, kill-line Y, and rankings each tick",
+	RaceEliminated = "Server tells clients a ship was eliminated (with placement)",
+	RaceFinished = "Server tells clients the race is over with the winner",
 }
 
 return EventDefs

@@ -71,7 +71,11 @@ function LobbyService.init()
 				warn("[LobbyService] Studio: game already running — join the existing one instead")
 				return
 			end
-			LobbyService._startLocalGame(player, gameId, killTarget, maxPlayers)
+			if settings.gameMode == "race" then
+				LobbyService._startLocalRace(player, gameId, maxPlayers)
+			else
+				LobbyService._startLocalGame(player, gameId, killTarget, maxPlayers)
+			end
 			return
 		end
 
@@ -417,7 +421,7 @@ end
 function LobbyService._startLocalSandbox(player: Player)
 	print("[LobbyService] Starting LOCAL sandbox (Studio mode) for", player.Name)
 
-	-- Boot game services once
+	-- Boot game services once (idempotent via studioServicesBooted flag)
 	if not studioServicesBooted then
 		studioServicesBooted = true
 
@@ -458,6 +462,60 @@ function LobbyService._startLocalSandbox(player: Player)
 	GameService.addPlayer(player)
 
 	print("[LobbyService] Local sandbox started!")
+end
+
+--[[
+	Start a local Race mode game (Studio only).
+	Boots ShipService + BotService + RaceService and adds the player.
+]]
+function LobbyService._startLocalRace(player: Player, gameId: string, maxPlayers: number)
+	print("[LobbyService] Starting LOCAL race (Studio mode) for", player.Name)
+
+	if not studioServicesBooted then
+		studioServicesBooted = true
+
+		local ShipService = require(script.Parent.ShipService)
+		local BotService = require(script.Parent.BotService)
+		local RaceService = require(script.Parent.RaceService)
+		local GameService = require(script.Parent.GameService)
+
+		ShipService.init()
+		BotService.init()
+		RaceService.init()
+
+		-- Stub a minimal GameService config so existing events (GameConfig, SwitchMode) still work.
+		GameService._studioConfig = {
+			gameId = gameId,
+			killTarget = 0,
+			maxPlayers = maxPlayers,
+			hostId = player.UserId,
+			isSandbox = false,
+			isRace = true,
+		}
+		GameService.init()
+
+		-- Enable bot race AI and spawn race bots
+		BotService.setRaceMode(true)
+
+		GameService._heartbeatConnection = RunService.Heartbeat:Connect(function(deltaTime: number)
+			-- preUpdate runs BEFORE ShipService.update so we can lock ships during countdown
+			RaceService.preUpdate(deltaTime)
+			ShipService.update(deltaTime)
+			BotService.update(deltaTime)
+			RaceService.update(deltaTime)
+			GameService.update(deltaTime)
+		end)
+	end
+
+	-- Add player to the underlying GameService (sends SwitchMode "race")
+	local GameService = require(script.Parent.GameService)
+	GameService.addPlayer(player)
+
+	-- Register them with the race
+	local RaceService = require(script.Parent.RaceService)
+	RaceService.addPlayer(player)
+
+	print("[LobbyService] Local race started! GameId:", gameId)
 end
 
 -- Broadcast the studio game list to all connected players (for the menu)

@@ -270,10 +270,20 @@ function ViewportController.update(deltaTime: number)
 	
 	-- Smooth follow: lerp toward target (prevents jarring jumps)
 	local t = math.min(1, FOLLOW_SPEED * deltaTime)
-	local targetPos = ViewportController.targetPosition or Vector2.new(0, 0)
+	local targetPos
+	if ViewportController.followMode == "leader" then
+		targetPos = ViewportController.leaderPosition or Vector2.new(0, 0)
+	else
+		targetPos = ViewportController.targetPosition or Vector2.new(0, 0)
+	end
 	
 	-- Camera lead: shift viewport ahead in the travel direction at high speed
-	local vel = ViewportController.targetVelocity or Vector2.new(0, 0)
+	local vel
+	if ViewportController.followMode == "leader" then
+		vel = ViewportController.leaderVelocity or Vector2.new(0, 0)
+	else
+		vel = ViewportController.targetVelocity or Vector2.new(0, 0)
+	end
 	local speed = vel.Magnitude
 	local maxSpd = Constants.SHIP_MAX_SPEED
 	local speedFrac = math.clamp(speed / maxSpd, 0, 1)
@@ -292,6 +302,22 @@ end
 -- The target position to follow (set by ShipController when it gets updates)
 ViewportController.targetPosition = Vector2.new(0, 0)
 ViewportController.targetVelocity = Vector2.new(0, 0)
+
+-- Leader follow mode (set by RaceController in race mode)
+ViewportController.followMode = "player"  -- "player" | "leader"
+ViewportController.leaderPosition = Vector2.new(0, 0)
+ViewportController.leaderVelocity = Vector2.new(0, 0)
+
+function ViewportController.setFollowMode(mode: string)
+	ViewportController.followMode = mode
+end
+
+function ViewportController.setLeaderPosition(pos: Vector2, vel: Vector2?)
+	ViewportController.leaderPosition = pos
+	if vel then
+		ViewportController.leaderVelocity = vel
+	end
+end
 
 -- Expose the canvas so other controllers can add children to it
 function ViewportController.getCanvas(): Frame

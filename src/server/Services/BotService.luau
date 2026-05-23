@@ -29,6 +29,9 @@ local nextBotId = -1  -- negative IDs to avoid collision with real player UserId
 -- Current global difficulty (can be changed via dev panel)
 local currentDifficulty = "medium"
 
+-- Race mode flag (when true, bots use simple race behavior instead of normal AI)
+local raceMode = false
+
 -- Difficulty profiles
 local DIFFICULTY = {
 	easy = {
@@ -184,6 +187,49 @@ function BotService.getBotCount(): number
 end
 
 --[[
+	Enable/disable race mode behavior for bots.
+	In race mode bots: face NORTH (rotation = 0), full thrust, with slight wobble.
+	They do not shoot or chase players.
+]]
+function BotService.setRaceMode(enabled: boolean)
+	raceMode = enabled
+	print("[BotService] Race mode:", enabled)
+end
+
+function BotService.isRaceMode(): boolean
+	return raceMode
+end
+
+--[[
+	Race-mode update: simple straight-line racer AI.
+]]
+local function updateRaceMode(deltaTime: number)
+	local ships = ShipService.getShips()
+	for botId, bot in bots do
+		local ship = ships[botId]
+		if not ship then continue end
+		if ship.health <= 0 then continue end
+
+		-- Wobble target angle slightly so bots don't all overlap
+		bot.aiTimer = bot.aiTimer - deltaTime
+		if bot.aiTimer <= 0 then
+			bot.aiTimer = 0.6 + math.random() * 0.6
+			-- Desired angle: roughly 0 (north) with +/- small wobble
+			bot.desiredAngle = (math.random() - 0.5) * 0.5   -- +/- 0.25 rad
+		end
+
+		-- Steer toward desiredAngle
+		local currentAngle = ship.rotation
+		local diff = normalizeAngle(bot.desiredAngle - currentAngle)
+		local turnTarget = math.clamp(diff * 1.5, -1, 1)
+		bot.smoothTurn = lerpNum(bot.smoothTurn, turnTarget, 6, deltaTime)
+		bot.smoothThrust = lerpNum(bot.smoothThrust, 1, 3, deltaTime)
+		ship.input.turn = bot.smoothTurn
+		ship.input.thrust = bot.smoothThrust
+	end
+end
+
+--[[
 	AI update — called every server frame.
 	
 	Decision-making happens on a timer (reaction time), but the actual
@@ -191,6 +237,11 @@ end
 	ease into turns and accelerate gradually — just like a real player.
 ]]
 function BotService.update(deltaTime: number)
+	if raceMode then
+		updateRaceMode(deltaTime)
+		return
+	end
+
 	local ships = ShipService.getShips()
 	
 	for botId, bot in bots do

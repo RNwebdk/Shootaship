@@ -287,13 +287,49 @@ function MainMenu.init()
 	modeLabel.Position = UDim2.new(0, 0, 0, 50)
 	modeLabel.Size = UDim2.new(1, 0, 0, 18)
 
+	-- Selected mode (closed-over by the toggle button and CREATE GAME handler)
+	local selectedMode = "deathmatch"
+
 	local modeValue = createLabel(createPanel, "DEATHMATCH", 16, COLORS.green, Enum.Font.GothamBlack)
 	modeValue.Position = UDim2.new(0, 0, 0, 68)
-	modeValue.Size = UDim2.new(1, 0, 0, 24)
+	modeValue.Size = UDim2.new(0.65, 0, 0, 24)
+	modeValue.TextXAlignment = Enum.TextXAlignment.Left
 
 	local modeDesc = createLabel(createPanel, "First to reach the kill target wins", 12, COLORS.textDim, Enum.Font.Gotham)
 	modeDesc.Position = UDim2.new(0, 0, 0, 94)
 	modeDesc.Size = UDim2.new(1, 0, 0, 18)
+	modeDesc.TextXAlignment = Enum.TextXAlignment.Left
+
+	-- Mode toggle button
+	local modeBtn = Instance.new("TextButton")
+	modeBtn.Size = UDim2.new(0.32, 0, 0, 28)
+	modeBtn.Position = UDim2.new(0.68, 0, 0, 68)
+	modeBtn.BackgroundColor3 = COLORS.separator
+	modeBtn.Text = "CHANGE"
+	modeBtn.TextColor3 = COLORS.text
+	modeBtn.Font = Enum.Font.GothamBold
+	modeBtn.TextSize = 12
+	modeBtn.BorderSizePixel = 0
+	modeBtn.AutoButtonColor = true
+	modeBtn.Parent = createPanel
+	createCorner(modeBtn, 6)
+
+	local function applyModeVisuals()
+		if selectedMode == "race" then
+			modeValue.Text = "RACE"
+			modeValue.TextColor3 = COLORS.accent
+			modeDesc.Text = "Last ship past the kill-line wins"
+		else
+			modeValue.Text = "DEATHMATCH"
+			modeValue.TextColor3 = COLORS.green
+			modeDesc.Text = "First to reach the kill target wins"
+		end
+	end
+
+	modeBtn.MouseButton1Click:Connect(function()
+		selectedMode = (selectedMode == "deathmatch") and "race" or "deathmatch"
+		applyModeVisuals()
+	end)
 
 	-- Kill Target input
 	local killLabel = createLabel(createPanel, "KILL TARGET", 11, COLORS.textMuted, Enum.Font.GothamBold)
@@ -330,6 +366,7 @@ function MainMenu.init()
 		startBtn.Text = "CREATING..."
 		local createEvent = EventManager.getEvent("CreateGame")
 		createEvent:FireServer({
+			gameMode = selectedMode,
 			killTarget = getKillTarget(),
 			maxPlayers = getMaxPlayers(),
 		})
